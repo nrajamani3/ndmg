@@ -46,7 +46,7 @@ def ndmg_dwi_pipeline(dwi, bvals, bvecs, mprage, atlas, mask, labels, outdir,
 
     # Create derivative output directories
     dwi_name = mgu.get_filename(dwi)
-    cmd = "mkdir -p {}/reg/dwi {}/tensors {}/fibers {}/graphs \
+    cmd = "mkdir -p {}/reg/dwi {}/tensors {}/fibers {}/graphs  \
            {}/qa/tensors {}/qa/tensors {}/qa/fibers {}/qa/reg/dwi"
     cmd = cmd.format(*([outdir] * 8))
     mgu.execute_cmd(cmd)
@@ -60,12 +60,14 @@ def ndmg_dwi_pipeline(dwi, bvals, bvecs, mprage, atlas, mask, labels, outdir,
         label_name = mgu.get_filename(labels)
         mgu.execute_cmd("mkdir -p {}/graphs/".format(outdir, label_name))
 
-    # Create derivative output file names
+     #Create derivative output file names()
+
     aligned_dwi = "{}/reg/dwi/{}_aligned.nii.gz".format(outdir, dwi_name)
     tensors = "{}/tensors/{}_tensors.npz".format(outdir, dwi_name)
     fibers = "{}/fibers/{}_fibers.npz".format(outdir, dwi_name)
+
     print("This pipeline will produce the following derivatives...")
-    print("DWI volume registered to atlas: {}".format(aligned_dwi))
+    print ("NEW DEVELOPMENT SCRIPT")
     print("Diffusion tensors in atlas space: {}".format(tensors))
     print("Fiber streamlines in atlas space: {}".format(fibers))
 
@@ -87,23 +89,25 @@ def ndmg_dwi_pipeline(dwi, bvals, bvecs, mprage, atlas, mask, labels, outdir,
     mgr().dwi2atlas(dwi1, gtab, mprage, atlas, aligned_dwi, outdir, clean)
     loc0 = np.where(gtab.b0s_mask)[0][0]
     reg_mri_pngs(aligned_dwi, atlas, "{}/qa/reg/dwi/".format(outdir), loc=loc0)
-
+    
     print("Beginning tractography...")
     # Compute tensors and track fiber streamlines
-    tens, tracks = mgt().eudx_basic(aligned_dwi, mask, gtab, stop_val=0.2)
-    tensor2fa(tens, tensors, aligned_dwi, "{}/tensors/".format(outdir),
+    ten,tracks = mgt().track(dwi, gtab, mask)
+    tensor2fa(ten,tensors, dwi, "{}/tensors/".format(outdir),
               "{}/qa/tensors/".format(outdir))
 
     # As we've only tested VTK plotting on MNI152 aligned data...
-    if nb.load(mask).get_data().shape == (182, 218, 182):
-        try:
-            visualize_fibs(tracks, fibers, mask,
+    shape = nb.load(mask).get_data().shape
+    try:
+        print(shape)
+        visualize_fibs(tracks, fibers, mask,
                            "{}/qa/fibers/".format(outdir), 0.02)
-        except:
-            print("Fiber QA failed - VTK for Python not configured properly.")
+    except:
+        print(shape)
+        print("Fiber QA failed - VTK for Python not configured properly.")
 
     # And save them to disk
-    np.savez(tensors, tens)
+    np.savez(tensors, ten)
     np.savez(fibers, tracks)
 
     # Generate graphs from streamlines for each parcellation
